@@ -1,11 +1,10 @@
+var util = new WebGLUtils();
+
 var canvas = document.getElementById('canvas');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-var gl = canvas.getContext('webgl2');
-// 0.0 -> 1.0
-gl.clearColor(0.1,0.1,0.1,1.0);
-gl.clear(gl.DEPTH_BUFFER_BIT|gl.COLOR_BUFFER_BIT);
-console.log(gl);
+
+var gl = util.getGLContext(canvas);
 
 var triangleCoords = [0.0, -1.0, 0.0, 1.0, 1.0, -1.0];
 
@@ -24,39 +23,22 @@ void main () {
 }
 `;
 //Step2 : Create Program from shaders
-var vs = gl.createShader(gl.VERTEX_SHADER);
-var fs = gl.createShader(gl.FRAGMENT_SHADER);
-gl.shaderSource(vs, vertexShader);
-gl.shaderSource(fs, fragmentShader);
-gl.compileShader(vs);
-gl.compileShader(fs);
-if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)){
-  console.error(gl.getShaderInfoLog(vs));
-}
-
-if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)){
-  console.error(gl.getShaderInfoLog(fs));
-}
-
-var program = gl.createProgram();
-gl.attachShader(program, vs);
-gl.attachShader(program, fs);
-gl.linkProgram(program);
-if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
-  console.error(gl.getProgramInfoLog(program));
-}
-console.log(program);
+var program = util.getProgram(gl, vertexShader, fragmentShader);
 //Step3 : Create Buffers
-var buffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER ,buffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleCoords), gl.STATIC_DRAW);
-gl.bindBuffer(gl.ARRAY_BUFFER, null);
+var buffer = util.createAndBindBuffer(gl.ARRAY_BUFFER, gl.STATIC_DRAW, new Float32Array(triangleCoords));
 
 //Step4 : Link GPU variable to CPU and sending data
 gl.useProgram(program);
-var position = gl.getAttribLocation(program, 'position');
-gl.enableVertexAttribArray(position);
-gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-gl.vertexAttribPointer(position, 2, gl.FLOAT, gl.FALSE, 0, 0);
+var position = util.linkGPUAndCPU({
+  program : program,
+  gpuVariable : 'position',
+  channel : gl.ARRAY_BUFFER,
+  buffer : buffer,
+  dims : 2,
+  dataType : gl.FLOAT,
+  normalize : gl.FALSE,
+  stride : 0,
+  offset : 0
+},gl);
 //Step5 : Render Triangle
 gl.drawArrays(gl.TRIANGLES, 0, 3);
